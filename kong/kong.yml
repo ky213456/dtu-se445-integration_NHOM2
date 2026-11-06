@@ -1,0 +1,47 @@
+# Kong chay che do khai bao (DB-less).
+# Sua file nay roi chay: docker compose restart kong
+# Kiem tra route da nap chua: http://localhost:8001/routes
+
+_format_version: "3.0"
+
+services:
+  - name: integration-service
+    url: http://integration-service:4000
+    routes:
+      - name: stock-route
+        paths: ["/api/v1/products"]
+        strip_path: false
+      - name: orders-route
+        paths: ["/api/v1/orders"]
+        strip_path: false
+      - name: ai-route
+        paths: ["/api/v1/ai"]
+        strip_path: false
+      - name: dashboard-route
+        paths: ["/api/v1/dashboard"]
+        strip_path: false
+    plugins:
+      # --- Scenario 2: gioi han tan suat, vuot nguong tra 429 ---
+      - name: rate-limiting
+        config:
+          minute: 20          # 20 request/phut/IP - gia tri thap de demo thay ro
+          policy: local
+          limit_by: ip
+          error_message: "Vuot qua gioi han tan suat. Thu lai sau."
+
+      # --- Gan ma tuong quan de lan theo 1 request qua nhieu service ---
+      - name: correlation-id
+        config:
+          header_name: X-Correlation-Id
+          generator: uuid
+          echo_downstream: true
+
+      - name: jwt
+        config:
+          claims_to_verify: ["exp"]
+
+consumers:
+  - username: ecommerce-web
+    jwt_secrets:
+      - key: ecommerce-web
+        secret: doi-thanh-chuoi-bi-mat-cua-nhom
