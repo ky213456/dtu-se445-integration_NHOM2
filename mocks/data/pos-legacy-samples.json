@@ -1,0 +1,29 @@
+{
+  "_ghi_chu": "Du lieu that xuat tu he thong POS cu. Dung cho Case study 4 - anh xa du lieu bang AI.",
+  "mau_1_json_chuan": {
+    "MA_SP": "SKU123",
+    "TEN_SP": "Ao thun co tron",
+    "SOLUONG": 5,
+    "GIABAN": 150000,
+    "NGAY_BAN": "15/09/2026"
+  },
+  "mau_2_gia_la_chuoi_co_dau_cham": {
+    "MA_SP": "SKU789",
+    "TEN_SP": "Giay sneaker trang",
+    "SOLUONG": "2",
+    "GIABAN": "1.250.000",
+    "NGAY_BAN": "15/09/2026"
+  },
+  "mau_3_thieu_truong_va_khac_dinh_dang_ngay": {
+    "MaSP": "SKU321",
+    "So_Luong": 1,
+    "NGAY_BAN": "2026-09-15"
+  },
+  "mau_4_ten_truong_tieng_anh": {
+    "item_code": "SKU456",
+    "qty": 3,
+    "price_vnd": 890000,
+    "sold_at": "2026-09-15T10:30:00+07:00"
+  },
+  "mau_5_xml": "<GiaoDich><MaSP>SKU123</MaSP><SoLuong>4</SoLuong><GiaBan>150000</GiaBan></GiaoDich>"
+}

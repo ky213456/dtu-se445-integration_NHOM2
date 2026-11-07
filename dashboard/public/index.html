@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ABC Retail — Bảng giám sát tích hợp</title>
+<style>
+:root{
+  --paper:#F2F4F1;--panel:#fff;--ink:#16211C;--soft:#4A5A52;--rule:#C9D2CC;
+  --pine:#1F5E4A;--pine-lite:#E4EFE9;--brick:#B3341F;--brick-lite:#F7E6E2;
+  --amber:#A8730B;--amber-lite:#F9EEDA;--term:#0F1A16;
+  --sans:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif;
+  --mono:ui-monospace,Consolas,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--sans);font-size:15px;line-height:1.5}
+header{background:var(--panel);border-bottom:1px solid var(--rule);padding:16px 0}
+.wrap{max-width:960px;margin:0 auto;padding:0 20px}
+h1{font-size:21px;margin:0;letter-spacing:-.01em}
+header p{margin:3px 0 0;color:var(--soft);font-size:13.5px}
+h2{font-size:15px;margin:26px 0 10px;letter-spacing:-.01em}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.card{background:var(--panel);border:1px solid var(--rule);border-radius:5px;padding:13px 15px}
+.card .n{font-size:11.5px;font-family:var(--mono);color:var(--soft);text-transform:uppercase;letter-spacing:.05em}
+.card .v{font-size:22px;font-weight:600;margin-top:4px;display:flex;align-items:center;gap:7px}
+.dot{width:9px;height:9px;border-radius:50%;display:inline-block;flex:none}
+.up{background:var(--pine)} .down{background:var(--brick)} .unk{background:#B8C4BC}
+.v.up-t{color:var(--pine)} .v.down-t{color:var(--brick)}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-size:14px;font-weight:500;padding:9px 16px;border:1px solid var(--pine);
+       background:var(--pine);color:#fff;border-radius:4px;cursor:pointer}
+button:hover{background:#17493A}
+button.alt{background:none;color:var(--pine)}
+button.alt:hover{background:var(--pine-lite)}
+button:disabled{opacity:.5;cursor:wait}
+pre{background:var(--term);color:#D6E4DC;font-family:var(--mono);font-size:12.5px;line-height:1.6;
+    padding:13px 15px;border-radius:5px;overflow-x:auto;margin:10px 0 0;white-space:pre-wrap;min-height:70px}
+.note{background:var(--amber-lite);border-left:3px solid var(--amber);padding:10px 13px;
+      border-radius:0 4px 4px 0;font-size:13.5px;margin:14px 0}
+footer{color:var(--soft);font-size:12.5px;margin:30px 0 40px}
+</style>
+</head>
+<body>
+
+<header><div class="wrap">
+  <h1>ABC Retail — Bảng giám sát tích hợp</h1>
+  <p>Trạng thái hệ thống và chạy thử kịch bản · tự cập nhật mỗi 5 giây</p>
+</div></header>
+
+<div class="wrap">
+
+  <h2>Trạng thái bốn hệ thống</h2>
+  <div class="grid" id="systems">
+    <div class="card"><div class="n">đang tải</div><div class="v">—</div></div>
+  </div>
+
+  <h2>Chỉ số</h2>
+  <div class="grid" id="metrics"></div>
+
+  <h2>Chạy thử kịch bản</h2>
+  <div class="btns">
+    <button data-s="stock">Tra tồn kho</button>
+    <button data-s="order">Đặt một đơn hàng</button>
+    <button data-s="ratelimit" class="alt">Bắn 30 request · kiểm tra 429</button>
+  </div>
+  <pre id="out">Bấm một nút để chạy kịch bản.</pre>
+
+  <div class="note">
+    <strong>TODO của nhóm:</strong> thêm biểu đồ mã trạng thái bằng Chart.js, ô hiển thị nội dung
+    tin nhắn trong hàng đợi lỗi, và ô chuyển đổi dữ liệu bằng AI.
+  </div>
+
+  <footer>Gateway <code>:8000</code> · RabbitMQ <code>:15672</code> · Dashboard <code>:3000</code></footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+
+function card(name, value, state){
+  const cls = state === 'UP' ? 'up' : state === 'DOWN' ? 'down' : 'unk';
+  const tcl = state === 'UP' ? 'up-t' : state === 'DOWN' ? 'down-t' : '';
+  return `<div class="card"><div class="n">${name}</div>
+          <div class="v ${tcl}"><span class="dot ${cls}"></span>${value}</div></div>`;
+}
+
+async function refresh(){
+  try{
+    const r = await fetch('/api/summary');
+    const d = await r.json();
+    if(d.error){ $('#systems').innerHTML = card('Integration Service','DOWN','DOWN'); return; }
+
+    $('#systems').innerHTML = Object.entries(d.legacySystems || {})
+      .map(([k,v]) => card(k.toUpperCase(), v, v)).join('');
+
+    const dlq = d.dlqDepth;
+    $('#metrics').innerHTML =
+      card('Tổng đơn hàng', d.orders?.total ?? 0, '') +
+      card('Đang xử lý', d.orders?.processing ?? 0, '') +
+      card('Hàng đợi lỗi', dlq ?? '—', dlq > 0 ? 'DOWN' : 'UP');
+  }catch(e){
+    $('#systems').innerHTML = card('Dashboard', 'mất kết nối', 'DOWN');
+  }
+}
+
+document.querySelectorAll('button[data-s]').forEach(b => {
+  b.addEventListener('click', async () => {
+    const all = document.querySelectorAll('button[data-s]');
+    all.forEach(x => x.disabled = true);
+    $('#out').textContent = 'Đang chạy...';
+    try{
+      const r = await fetch('/api/run/' + b.dataset.s, { method:'POST' });
+      $('#out').textContent = JSON.stringify(await r.json(), null, 2);
+    }catch(e){
+      $('#out').textContent = 'Lỗi: ' + e.message;
+    }
+    all.forEach(x => x.disabled = false);
+    refresh();
+  });
+});
+
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>
